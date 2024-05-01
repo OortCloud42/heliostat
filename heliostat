@@ -1,0 +1,75 @@
+#!/usr/bin/env bash
+set -uo pipefail
+
+countries="all"
+num_mirrors="5"
+replace_mirrorlist=false
+debug=false
+
+usage() {
+  cat <<END_USAGE >&2
+    Usage: $(basename "$0") [-c <country_list>] [-n <num_mirrors>] [-r] [-h] [-v]
+    Options:
+      -c <country_list>: Comma-separated list of countries (default: all)
+      -n <num_mirrors>: Number of mirrors to use (default: 5)
+      -r: Replace the current mirrorlist (default: false)
+      -v: Verbose mode (default: false)
+      -h: Show this help message
+END_USAGE
+  exit 1
+}
+
+debug() {
+  [[ "$debug" == true ]] && echo "$@" >&2
+}
+
+while getopts ":c:n:hvr" opt; do
+  case ${opt} in
+    c )
+      countries="$OPTARG"
+      ;;
+    n )
+      if ! [[ "$OPTARG" =~ ^[1-9][0-9]*$ ]]; then
+        echo "Mirror number must be a positive integer." >&2
+        usage
+      fi
+      num_mirrors="$OPTARG"
+      ;;
+    r ) replace_mirrorlist=true ;;
+    v ) debug=true ;;
+    h ) usage ;;
+    \? ) echo "Invalid option -$OPTARG" >&2; usage ;;
+    : ) echo "Option -$OPTARG requires an argument." >&2; usage ;;
+  esac
+done
+shift $((OPTIND -1))
+
+if [[ "$countries" != "all" ]]; then
+  countries="${countries^^}"
+fi
+countries=$(echo "$countries" | sed -E 's/,*$//; s/^,*//; s/,/\&country=/g; s/^/\?country=/')
+
+debug "Country list: " "$countries"
+debug "Mirror number: " "$num_mirrors"
+
+mirrors_addr="https://archlinux.org/mirrorlist/$countries&protocol=https&ip_version=4&use_mirror_status=on"
+debug "Request URI: " "$mirrors_addr"
+
+echo "Getting mirrorlist from archlinux.org..." >&2
+mirrorlist=$(curl -fs "$mirrors_addr" | sed -E 's/^#Server/Server/; /^##/d; /^$/d')
+echo Mirrors received: "$(echo "$mirrorlist" | wc -l)" >&2
+debug "Mirrorlist (unranked): " "$mirrorlist"
+
+echo "Ranking mirrors..." >&2
+mirrorlist=$(echo "$mirrorlist" | rankmirrors -n "$num_mirrors" -)
+echo "Mirrors ranked." >&2
+
+if [[ "$replace_mirrorlist" = true ]]; then
+  echo "Saving mirrorlist to /etc/pacman.d/mirrorlist" >&2
+  sudo cp /etc/pacman.d/mirrorlist "/etc/pacman.d/mirrorlist.$(date +"%s").bak"
+  echo "$mirrorlist" | sudo tee /etc/pacman.d/mirrorlist > /dev/null
+  echo "Done" >&2
+else
+  echo "Ranked mirrorlist:" >&2
+  echo "$mirrorlist"
+fi
