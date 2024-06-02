@@ -17,7 +17,7 @@ This Bash script updates the Arch Linux mirrorlist by fetching and ranking mirro
 ## Usage
 
 ```bash
-./mirrorlist_updater.sh [-c <country_list>] [-n <num_mirrors>] [-r] [-h] [-v]
+./shellcheck [-c <country_list>] [-n <num_mirrors>] [-r] [-h] [-v]
 ```
 
 - `-c <country_list>`: Comma-separated list of countries (default: all)
@@ -28,5 +28,5 @@ This Bash script updates the Arch Linux mirrorlist by fetching and ranking mirro
 
 Example:
 ```bash
-./mirrorlist_updater.sh -c US,CA -n 10 -r
+./shellcheck -c US,CA -n 10 -r
 ```
