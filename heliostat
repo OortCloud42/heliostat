@@ -1,10 +1,17 @@
 #!/usr/bin/env bash
 set -uo pipefail
 
+header_date=$(date "+%F")
 countries="all"
 num_mirrors="5"
 replace_mirrorlist=false
 debug=false
+mirrorlist_header=$(cat <<END_HEADER
+### Mirrorlist generated on $header_date
+### from https://archlinux.org/mirrorlist
+### using https://github.com/OortCloud42/heliostat
+END_HEADER
+)
 
 usage() {
   cat <<END_USAGE >&2
@@ -65,9 +72,13 @@ mirrorlist=$(echo "$mirrorlist" | rankmirrors -n "$num_mirrors" -)
 echo "Mirrors ranked." >&2
 
 if [[ "$replace_mirrorlist" = true ]]; then
+  echo "New mirrorlist:" >&2
+  echo "$mirrorlist" >&2
+  read -p "Replace existing mirrorlist? (y/N): " choice
+  [[ "$choice" != [yY] ]] && exit 1
   echo "Saving mirrorlist to /etc/pacman.d/mirrorlist" >&2
   sudo cp /etc/pacman.d/mirrorlist "/etc/pacman.d/mirrorlist.hs.bak"
-  echo "$mirrorlist" | sudo tee /etc/pacman.d/mirrorlist > /dev/null
+  printf '%s\n%s' "$mirrorlist_header" "$mirrorlist" | sudo tee /etc/pacman.d/mirrorlist > /dev/null
   echo "Done" >&2
 else
   echo "Ranked mirrorlist:" >&2
