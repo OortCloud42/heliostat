@@ -17,16 +17,17 @@ This Bash script updates the Arch Linux mirrorlist by fetching and ranking mirro
 ## Usage
 
 ```bash
-./shellcheck [-c <country_list>] [-n <num_mirrors>] [-r] [-h] [-v]
+./heliostat [-c <country_list>] [-n <num_mirrors>] [-r] [-h] [-v]
 ```
 
 - `-c <country_list>`: Comma-separated list of countries (default: all)
 - `-n <num_mirrors>`: Number of mirrors to use (default: 5)
 - `-r`: Replace the current mirrorlist (default: false)
+- -f: Skip confirmation before replacing mirrorlist (default: false)
 - `-v`: Verbose mode (default: false)
 - `-h`: Show help message
 
 Example:
 ```bash
-./shellcheck -c US,CA -n 10 -r
+./heliostat -c US,CA -n 10 -r
 ```

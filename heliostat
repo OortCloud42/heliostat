@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
 set -uo pipefail
 
-header_date=$(date "+%F")
+header_date=$(date '+%c')
 countries="all"
 num_mirrors="5"
 replace_mirrorlist=false
+skip_confirmation=false
 debug=false
 mirrorlist_header=$(cat <<END_HEADER
 ### Mirrorlist generated on $header_date
@@ -17,11 +18,12 @@ usage() {
   cat <<END_USAGE >&2
     Usage: $(basename "$0") [-c <country_list>] [-n <num_mirrors>] [-r] [-h] [-v]
     Options:
-      -c <country_list>: Comma-separated list of countries (default: all)
-      -n <num_mirrors>: Number of mirrors to use (default: 5)
-      -r: Replace the current mirrorlist (default: false)
-      -v: Verbose mode (default: false)
-      -h: Show this help message
+      -c <country_list> - Comma-separated list of countries (default: all)
+      -n <num_mirrors> - Number of mirrors to use (default: 5)
+      -r - Replace the current mirrorlist (default: false)
+      -f - Skip confirmation before replacing mirrorlist (default: false)
+      -v - Verbose mode (default: false)
+      -h - Show this help message
 END_USAGE
   exit 1
 }
@@ -30,7 +32,9 @@ debug() {
   [[ "$debug" == true ]] && echo "$@" >&2
 }
 
-while getopts ":c:n:hvr" opt; do
+command -v rankmirrors >/dev/null 2>&1 || { echo "rankmirrors not found, please install pacman-contrib" >&2; exit 1; }
+
+while getopts ":c:n:fhrv" opt; do
   case ${opt} in
     c )
       countries="$OPTARG"
@@ -42,9 +46,10 @@ while getopts ":c:n:hvr" opt; do
       fi
       num_mirrors="$OPTARG"
       ;;
+    f ) skip_confirmation=true ;;
+    h ) usage ;;
     r ) replace_mirrorlist=true ;;
     v ) debug=true ;;
-    h ) usage ;;
     \? ) echo "Invalid option -$OPTARG" >&2; usage ;;
     : ) echo "Option -$OPTARG requires an argument." >&2; usage ;;
   esac
@@ -74,7 +79,7 @@ echo "Mirrors ranked." >&2
 if [[ "$replace_mirrorlist" = true ]]; then
   echo "New mirrorlist:" >&2
   echo "$mirrorlist" >&2
-  read -p "Replace existing mirrorlist? (y/N): " choice
+  [[ "$skip_confirmation" == false ]] && read -p "Replace existing mirrorlist? (y/N): " choice
   [[ "$choice" != [yY] ]] && exit 1
   echo "Saving mirrorlist to /etc/pacman.d/mirrorlist" >&2
   sudo cp /etc/pacman.d/mirrorlist "/etc/pacman.d/mirrorlist.hs.bak"
