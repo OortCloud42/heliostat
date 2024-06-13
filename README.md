@@ -23,7 +23,7 @@ This Bash script updates the Arch Linux mirrorlist by fetching and ranking mirro
 - `-c <country_list>`: Comma-separated list of countries (default: all)
 - `-n <num_mirrors>`: Number of mirrors to use (default: 5)
 - `-r`: Replace the current mirrorlist (default: false)
-- -f: Skip confirmation before replacing mirrorlist (default: false)
+- `-f`: Skip confirmation before replacing mirrorlist (default: false)
 - `-v`: Verbose mode (default: false)
 - `-h`: Show help message
 
