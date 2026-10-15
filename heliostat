@@ -68,22 +68,29 @@ mirrors_addr="https://archlinux.org/mirrorlist/$countries&protocol=https&ip_vers
 debug "Request URI: " "$mirrors_addr"
 
 echo "Getting mirrorlist from archlinux.org..." >&2
-mirrorlist=$(curl -fs "$mirrors_addr" | sed -E 's/^#Server/Server/; /^##/d; /^$/d')
-echo Mirrors received: "$(echo "$mirrorlist" | wc -l)" >&2
+mirrorlist=$(curl -fs "$mirrors_addr" | sed -E 's/^#Server/Server/; /^##/d; /^$/d') \
+  || { echo "Failed to fetch mirrorlist from archlinux.org." >&2; exit 1; }
+mirror_count=$(grep -c '^Server' <<< "$mirrorlist")
+echo "Mirrors received: $mirror_count" >&2
+[[ "$mirror_count" -gt 0 ]] || { echo "No mirrors matched, check the country list." >&2; exit 1; }
 debug "Mirrorlist (unranked): " "$mirrorlist"
 
 echo "Ranking mirrors..." >&2
 mirrorlist=$(echo "$mirrorlist" | rankmirrors -n "$num_mirrors" -)
+grep -q '^Server' <<< "$mirrorlist" || { echo "Ranking returned no reachable mirrors." >&2; exit 1; }
 echo "Mirrors ranked." >&2
 
 if [[ "$replace_mirrorlist" = true ]]; then
   echo "New mirrorlist:" >&2
   echo "$mirrorlist" >&2
-  [[ "$skip_confirmation" == false ]] && read -p "Replace existing mirrorlist? (y/N): " choice
-  [[ "$choice" != [yY] ]] && exit 1
+  if [[ "$skip_confirmation" == false ]]; then
+    read -rp "Replace existing mirrorlist? (y/N): " choice
+    [[ "$choice" == [yY] ]] || exit 1
+  fi
   echo "Saving mirrorlist to /etc/pacman.d/mirrorlist" >&2
-  sudo cp /etc/pacman.d/mirrorlist "/etc/pacman.d/mirrorlist.hs.bak"
-  printf '%s\n%s' "$mirrorlist_header" "$mirrorlist" | sudo tee /etc/pacman.d/mirrorlist > /dev/null
+  sudo cp /etc/pacman.d/mirrorlist "/etc/pacman.d/mirrorlist.hs.bak" \
+    || { echo "Backup failed, leaving the mirrorlist untouched." >&2; exit 1; }
+  printf '%s\n%s\n' "$mirrorlist_header" "$mirrorlist" | sudo tee /etc/pacman.d/mirrorlist > /dev/null
   echo "Done" >&2
 else
   echo "Ranked mirrorlist:" >&2
